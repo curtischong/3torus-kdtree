@@ -1,11 +1,4 @@
 {
     "C_Cpp.enhancedColorization": "enabled",
     "C_Cpp.default.cppStandard": "c++17",
-    "files.associations": {
-        "array": "cpp",
-        "vector": "cpp"
-    },
-    "workbench.preferredHighContrastColorTheme": "Default Dark+",
-    "workbench.colorTheme": "Abyss",
-    "workbench.preferredDarkColorTheme": "Default Dark Modern"
 }
