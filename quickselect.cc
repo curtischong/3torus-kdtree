@@ -2,15 +2,7 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
-
-// Define a constant to switch between float and double
-#define USE_DOUBLE true
-
-#if USE_DOUBLE
-using Number = double;
-#else
-using Number = float;
-#endif
+#include "consts.hh"
 
 // Partition function
 int partition(std::vector<Number>& arr, int left, int right) {
