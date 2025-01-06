@@ -10,3 +10,22 @@ compile3d:
 	-I$(shell python3-config --includes) \
 	-I./eigen-3.4.0 -I./eigen-3.4.0/Eigen \
 	bind.cc -o example
+
+simple:
+	g++ -O3 -Wall -shared -std=c++11 -fPIC \
+	-I./venv/lib/python3.11/site-packages/pybind11/include \
+	-I./venv/include/python3.11 \
+	-I./eigen-3.4.0 -I./eigen-3.4.0/Eigen \
+	simple.cc -o example \
+	-L./venv/lib \
+	-lpython3.11
+
+simple2:
+	c++ -O3 -Wall -std=c++11 -fPIC \
+	$(python -m pybind11 --includes) \
+	-I./eigen-3.4.0 -I./eigen-3.4.0/Eigen \
+	-I./venv/lib/python3.11/site-packages/pybind11/include \
+	-I/opt/homebrew/Frameworks/Python.framework/Versions/3.11/include/python3.11 \
+	-L/opt/homebrew/Frameworks/Python.framework/Versions/3.11/lib \
+	-lpython3.11 \
+	simple.cc -o example 
