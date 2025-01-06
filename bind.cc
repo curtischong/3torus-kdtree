@@ -125,23 +125,22 @@ py::dict create_nn_graph_np(py::array_t<double> coords,
   size_t M = src.size(); // number of edges
 
   // Create arrays of length M for src, dst, and shape (M,3) for disp
-  py::array_t<double> py_src(M);
-  py::array_t<double> py_dst(M);
-  py::array_t<double> py_disp(M * 3);
+  std::vector<ssize_t> edges_shape = {2, static_cast<ssize_t>(M)};
+  py::array_t<double> py_edges(edges_shape);
+  std::vector<ssize_t> disp_shape = {static_cast<ssize_t>(M), 3};
+  py::array_t<double> py_disp(disp_shape);
 
   // Get pointers to these arrays
-  auto buf_src = py_src.request();
-  auto buf_dst = py_dst.request();
+  auto buf_edges = py_edges.request();
   auto buf_disp = py_disp.request();
 
-  double *ptr_src = static_cast<double *>(buf_src.ptr);
-  double *ptr_dst = static_cast<double *>(buf_dst.ptr);
+  double *ptr_edges = static_cast<double *>(buf_edges.ptr);
   double *ptr_disp = static_cast<double *>(buf_disp.ptr);
 
   // Copy data
   for (size_t i = 0; i < M; ++i) {
-    ptr_src[i] = src[i];
-    ptr_dst[i] = dst[i];
+    ptr_edges[i] = src[i];
+    ptr_edges[M + i] = dst[i];
 
     // disp is stored in triplets: (dx, dy, dz)
     ptr_disp[3 * i + 0] = disp[3 * i + 0];
@@ -153,8 +152,7 @@ py::dict create_nn_graph_np(py::array_t<double> coords,
   // 6. Build and return a Python dict
   // -------------------------------
   py::dict result;
-  result["src"] = py_src;
-  result["dst"] = py_dst;
+  result["edges"] = py_edges;
   result["disp"] = py_disp; // shape (M,3)
   return result;
 }
