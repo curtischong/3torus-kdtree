@@ -3,7 +3,8 @@
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/eigen-3.4.0"
             ],
             "defines": [],
             "macFrameworkPath": [
