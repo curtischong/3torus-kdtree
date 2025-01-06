@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <tuple>
 #include <vector>
 
 // A small struct to hold a node in the KD-Tree
@@ -15,35 +16,59 @@ struct KDNode {
       : point(pt), index(idx), left(nullptr), right(nullptr) {}
 };
 
-// Helper function:
-// Transform (a - b) into fractional coordinates, shift to nearest periodic
-// image, then transform back to get minimal image distance (for general
-// lattice).
+/**
+ * Helper function:
+ *   Returns the minimal-image displacement from b to a under PBC, i.e.
+ *   "a - b" adjusted for periodic boundary conditions.  In other words:
+ *     fractionalDiff = invLattice * (a - b),
+ *     shift fractionalDiff by rounding each component to the nearest integer,
+ *     then transform back to Cartesian.
+ */
+inline Eigen::Vector3d periodicDisplacement(const Eigen::Vector3d &a,
+                                            const Eigen::Vector3d &b,
+                                            const Eigen::Matrix3d &lattice,
+                                            const Eigen::Matrix3d &invLattice) {
+  // Convert difference to fractional coordinates
+  Eigen::Vector3d diffFrac = invLattice * (a - b);
+
+  // Shift each component to nearest image
+  for (int i = 0; i < 3; i++) {
+    diffFrac(i) -= std::round(diffFrac(i));
+  }
+
+  // Transform back to Cartesian
+  return lattice * diffFrac;
+}
+
+// For convenience, we still keep the original "distance" helper,
+// but we can rely on periodicDisplacement(...) above
 inline double periodicDistance(const Eigen::Vector3d &a,
                                const Eigen::Vector3d &b,
                                const Eigen::Matrix3d &lattice,
                                const Eigen::Matrix3d &invLattice) {
-  // Convert difference to fractional coordinates
-  // fractionalDiff = invLattice * (a - b)
-  Eigen::Vector3d diff = invLattice * (a - b);
-
-  // Shift each component to the principal domain, e.g. [-0.5, 0.5)
-  // so that we find the "nearest image" in fractional space.
-  for (int i = 0; i < 3; i++) {
-    diff(i) -= std::round(diff(i));
-  }
-
-  // Transform back to Cartesian
-  Eigen::Vector3d cartDiff = lattice * diff;
-  return cartDiff.norm();
+  Eigen::Vector3d disp = periodicDisplacement(a, b, lattice, invLattice);
+  return disp.norm();
 }
+
+/**
+ * Structure to hold search results.
+ *   index        = index of the neighbor
+ *   distance     = minimal-image distance to the query
+ *   displacement = minimal-image displacement vector (query -> point)
+ */
+struct SearchResult {
+  int index;
+  double distance;
+  Eigen::Vector3d displacement;
+};
 
 /**
  * A simple 3D KDTree class that:
  *   - Stores the lattice matrix for periodic boundary calculations
  *   - Has a build(...) function that constructs the KD-tree recursively
- *   - Provides a radiusSearch(...) that returns indices of points within radius
- * r of a query point (under periodic boundary conditions)
+ *   - Provides a radiusSearch(...) that returns points within radius r
+ *     (under periodic boundary conditions), along with distances and
+ *     displacements.
  */
 class KDTree3D {
 public:
@@ -69,23 +94,21 @@ public:
   }
 
   /**
-   * Return all point-indices within radius r (periodic distance) of query.
+   * Return all points within radius r (periodic distance) of query,
+   * along with their minimal-image distances and displacements.
    */
-  std::vector<int> radiusSearch(const Eigen::Vector3d &query, double r) const {
-    std::vector<std::pair<double, int>> results;
+  std::vector<SearchResult> radiusSearch(const Eigen::Vector3d &query,
+                                         double r) const {
+    std::vector<SearchResult> results;
     radiusSearchRecursive(root_, query, r, 0, results);
 
-    // Sort the results vector by distance (first element of the pair)
-    std::sort(results.begin(), results.end());
+    // Sort the results vector by distance
+    std::sort(results.begin(), results.end(),
+              [](const SearchResult &a, const SearchResult &b) {
+                return a.distance < b.distance;
+              });
 
-    // Extract only the indexes (second element of the pair)
-    std::vector<int> sortedIndexes;
-    sortedIndexes.reserve(results.size());
-    for (const auto &pair : results) {
-      sortedIndexes.push_back(pair.second);
-    }
-
-    return sortedIndexes;
+    return results;
   }
 
 private:
@@ -134,50 +157,41 @@ private:
   }
 
   // Recursive radius search under periodic boundary conditions
-  void
-  radiusSearchRecursive(KDNode *node, const Eigen::Vector3d &query, double r,
-                        int depth,
-                        std::vector<std::pair<double, int>> &results) const {
+  void radiusSearchRecursive(KDNode *node, const Eigen::Vector3d &query,
+                             double r, int depth,
+                             std::vector<SearchResult> &results) const {
     if (!node)
       return;
 
-    // Compute the actual (periodic) distance from query to node->point
-    double dist = periodicDistance(query, node->point, lattice_, invLattice_);
+    // Compute minimal-image displacement from query -> node->point
+    Eigen::Vector3d disp =
+        periodicDisplacement(node->point, query, lattice_, invLattice_);
+    double dist = disp.norm();
+
+    // If it's within radius, add it
     if (dist <= r) {
-      // It's within radius, add it
-      results.push_back({dist, node->index});
+      SearchResult sr;
+      sr.index = node->index;
+      sr.distance = dist;
+      sr.displacement = disp;
+      results.push_back(sr);
     }
 
-    // Determine axis and coordinate difference along that axis
+    // Determine axis and coordinate difference along that axis (direct in
+    // Cartesian).
     int axis = depth % 3;
     double diff = query(axis) - node->point(axis);
 
-    // We decide which subtree to visit first based on diff
+    // Decide which subtree to visit first based on diff
     KDNode *first = (diff < 0.0 ? node->left : node->right);
     KDNode *second = (diff < 0.0 ? node->right : node->left);
 
     // Visit the first subtree
     radiusSearchRecursive(first, query, r, depth + 1, results);
 
-    // However, we need to see if the second subtree _might_ contain points
-    // within radius We can’t just rely on normal k-d bounding distance, because
-    // we have to account for periodic wrap. A straightforward (though not the
-    // most efficient) approach is to check anyway if |diff| could be < r in the
-    // minimal image sense.
-
-    // If the absolute difference (in the normal sense) is less than r, we
-    // definitely should check the other side.  In a truly periodic sense, we
-    // would also check if crossing the cell boundary might yield a smaller
-    // difference. A simpler approach is to ALWAYS check both sides or do a
-    // minimal-image style approach to the coordinate difference along the axis.
-    // We'll do the simpler check here.
-
-    double axisDist = std::abs(diff);
-    if (axisDist < r) {
-      // Because of potential wrap-around, let's also see if
-      //   periodicDistance( query, node->point +/- lattice vectors ) < r
-      // but for a minimal code example, we’ll just proceed to search the other
-      // side:
+    // Because of periodic boundaries, a simple axis check can be insufficient,
+    // but at minimum, if std::abs(diff) < r, we should also visit the second.
+    if (std::abs(diff) < r) {
       radiusSearchRecursive(second, query, r, depth + 1, results);
     }
   }
@@ -207,17 +221,16 @@ int main() {
   double radius = 3.0;
 
   // Search for neighbors within radius = 3.0 (under PBC)
-  std::vector<int> neighbors = kdtree.radiusSearch(query, radius);
+  std::vector<SearchResult> neighbors = kdtree.radiusSearch(query, radius);
 
   // Print results
   std::cout << "Neighbors of " << query.transpose() << " within radius "
             << radius << ":\n";
-  for (int idx : neighbors) {
-    Eigen::Vector3d p = points[idx];
-    double d = (p - query).norm(); // naive distance
-    double pd = periodicDistance(query, p, lattice, lattice.inverse());
-    std::cout << "  Index=" << idx << "  Point=(" << p.transpose() << ")"
-              << "  naive_dist=" << d << "  pbc_dist=" << pd << "\n";
+  for (const auto &res : neighbors) {
+    const Eigen::Vector3d &p = points[res.index];
+    std::cout << "  Index=" << res.index << "  Point=(" << p.transpose() << ")"
+              << "  distance=" << res.distance << "  disp=("
+              << res.displacement.transpose() << ")\n";
   }
 
   return 0;
