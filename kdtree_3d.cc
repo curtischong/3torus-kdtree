@@ -72,9 +72,20 @@ public:
    * Return all point-indices within radius r (periodic distance) of query.
    */
   std::vector<int> radiusSearch(const Eigen::Vector3d &query, double r) const {
-    std::vector<int> results;
+    std::vector<std::pair<double, int>> results;
     radiusSearchRecursive(root_, query, r, 0, results);
-    return results;
+
+    // Sort the results vector by distance (first element of the pair)
+    std::sort(results.begin(), results.end());
+
+    // Extract only the indexes (second element of the pair)
+    std::vector<int> sortedIndexes;
+    sortedIndexes.reserve(results.size());
+    for (const auto &pair : results) {
+      sortedIndexes.push_back(pair.second);
+    }
+
+    return sortedIndexes;
   }
 
 private:
@@ -123,9 +134,10 @@ private:
   }
 
   // Recursive radius search under periodic boundary conditions
-  void radiusSearchRecursive(KDNode *node, const Eigen::Vector3d &query,
-                             double r, int depth,
-                             std::vector<int> &results) const {
+  void
+  radiusSearchRecursive(KDNode *node, const Eigen::Vector3d &query, double r,
+                        int depth,
+                        std::vector<std::pair<double, int>> &results) const {
     if (!node)
       return;
 
@@ -133,7 +145,7 @@ private:
     double dist = periodicDistance(query, node->point, lattice_, invLattice_);
     if (dist <= r) {
       // It's within radius, add it
-      results.push_back(node->index);
+      results.push_back({dist, node->index});
     }
 
     // Determine axis and coordinate difference along that axis

@@ -23,15 +23,33 @@ convertToEigenMatrix3d(const std::vector<std::vector<double>> &vec) {
 
 NNGraph create_nn_graph(const std::vector<Eigen::Vector3d> &coords,
                         const std::vector<std::vector<double>> &lattice,
-                        double radius) {
+                        double radius, int max_neighbors, bool exclude_self) {
+  // Build the KDTree
   KDTree3D kdtree(coords, convertToEigenMatrix3d(lattice));
   NNGraph nnGraph;
-  std::vector<int> neighbors =
-      kdtree.radiusSearch(Eigen::Vector3d(0, 0, 0), radius);
-  for (int i = 0; i < neighbors.size(); ++i) {
-    nnGraph.src.push_back(i);
-    nnGraph.dst.push_back(neighbors[i]);
+  nnGraph.src.reserve(coords.size() * max_neighbors);
+  nnGraph.dst.reserve(coords.size() * max_neighbors);
+
+  // For each point, find neighbors within the given radius
+  for (int i = 0; i < static_cast<int>(coords.size()); ++i) {
+    // Find all neighbors within 'radius' of coords[i]
+    std::vector<int> neighbors = kdtree.radiusSearch(coords[i], radius);
+
+    // Limit the number of neighbors to max_neighbors (if needed)
+    if (static_cast<int>(neighbors.size()) > max_neighbors) {
+      neighbors.resize(max_neighbors);
+    }
+
+    // Insert edges into the graph
+    for (int nbrIdx : neighbors) {
+      // Optionally exclude self-edges if desired:
+      if (exclude_self && nbrIdx == i)
+        continue;
+      nnGraph.src.push_back(i);
+      nnGraph.dst.push_back(nbrIdx);
+    }
   }
+
   return nnGraph;
 }
 
@@ -43,5 +61,4 @@ PYBIND11_MODULE(3torus_kdtree, m) {
 
   m.def("create_nn_graph", &create_nn_graph,
         "Creates the nearest neighbor graph");
-}
 }
