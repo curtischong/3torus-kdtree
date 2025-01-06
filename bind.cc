@@ -127,7 +127,7 @@ py::dict create_nn_graph_np(py::array_t<double> coords,
 // -------------------------------
 // 6. Pybind11 Module Definition
 // -------------------------------
-PYBIND11_MODULE(3torus_kdtree, m) {
+PYBIND11_MODULE(kdtree_3torus, m) {
   m.doc() = "3-Torus KDTree with NumPy-based I/O via pybind11";
 
   // If you still need your old NNGraph struct, you can keep it/bind it here.
