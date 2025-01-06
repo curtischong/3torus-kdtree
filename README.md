@@ -2,6 +2,8 @@
 
 ### Install
 git submodule update --init
+python3.11 -m venv venv
+pip install pybind11
 
 
 The general algorithm:
