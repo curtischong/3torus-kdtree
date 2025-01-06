@@ -2,13 +2,15 @@
 #include "quickselect.cc"
 #include <vector>
 
+using namespace std;
+
 struct Node {
   Number val;
   Node *left;
   Node *right;
 
-  Node(const Number &val, Node *left, Node *right)
-      : val{val}, left{left}, right{right} {}
+  //   Node(const Number &val, Node *left, Node *right)
+  //       : val{val}, left{left}, right{right} {}
 
   // destructor
   ~Node() {
@@ -26,21 +28,21 @@ public:
   }
 
   Node *createNode(std::vector<Number> arr, int start, int end) {
+    cout << start << " " << end << endl;
     // for leaf nodes, just return a new node with the one value
-    Node *nd = new Node(arr[start], nullptr, nullptr);
-    if (end - start == 1) {
+    Node *nd = new Node;
+    int n = end - start;
+    if (n == 1) {
+      nd->val = arr[start];
       return nd;
     }
 
-    int n = end - start;
-
     // note that this is floor(n/2)
-    int pivotIdx = quickselect(arr, 0, n - 1, n / 2);
+    int pivotIdx = quickselect(arr, start, end, n / 2);
     Number median = arr[pivotIdx];
 
-    nd->val = median;
     nd->left = createNode(arr, start, pivotIdx);
-    nd->right = createNode(arr, pivotIdx + 1, end);
+    nd->right = createNode(arr, pivotIdx, end);
 
     return nd;
   }

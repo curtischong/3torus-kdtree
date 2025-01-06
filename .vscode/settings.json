@@ -2,6 +2,7 @@
     "C_Cpp.enhancedColorization": "enabled",
     "C_Cpp.default.cppStandard": "c++17",
     "files.associations": {
-        "vector": "cpp"
+        "vector": "cpp",
+        "ostream": "cpp"
     },
 }

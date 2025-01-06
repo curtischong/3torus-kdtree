@@ -4,52 +4,39 @@
 #include <iostream>
 #include <vector>
 
-// Partition function
 int partition(std::vector<Number> &arr, int left, int right) {
-  Number pivot = arr[right]; // Choose the last element as the pivot
-  int i = left - 1;          // Index for the smaller element
+  // pivot is the last element in [left, right)
+  Number pivot = arr[right - 1];
+  int i = left - 1;
 
-  for (int j = left; j < right; ++j) {
+  for (int j = left; j < right - 1; ++j) {
     if (arr[j] <= pivot) {
       ++i;
-      std::swap(arr[i], arr[j]); // Swap smaller element with arr[i]
+      std::swap(arr[i], arr[j]);
     }
   }
-  std::swap(arr[i + 1], arr[right]); // Place pivot in the correct position
+
+  std::swap(arr[i + 1], arr[right - 1]);
   return i + 1;
 }
 
-// Quickselect function
 int quickselect(std::vector<Number> &arr, int left, int right, int k) {
-  if (left <= right) {
-    int pivotIndex = partition(arr, left, right);
-
-    if (pivotIndex == k) {
-      //   return arr[pivotIndex];
-      return pivotIndex;
-    } else if (pivotIndex > k) {
-      return quickselect(arr, left, pivotIndex - 1, k);
-    } else {
-      return quickselect(arr, pivotIndex + 1, right, k);
-    }
+  // Base case: if the range has zero or one element, do not partition again.
+  // If it has exactly one element, it's at index 'left'.
+  if (right - left <= 1) {
+    // If there's exactly one element, check if it's the kth
+    return left;
   }
-  return -1.0; // This case should never occur
+
+  int pivotIndex = partition(arr, left, right);
+
+  if (pivotIndex == k) {
+    return pivotIndex;
+  } else if (pivotIndex > k) {
+    // Search in the left side [left, pivotIndex)
+    return quickselect(arr, left, pivotIndex, k);
+  } else {
+    // Search in the right side [pivotIndex+1, right)
+    return quickselect(arr, pivotIndex + 1, right, k);
+  }
 }
-
-// int main() {
-//   std::srand(std::time(nullptr));
-//   std::vector<Number> arr = {3.2, 2.1, 1.5, 5.8, 4.6};
-
-//   int k = 2; // Find the 2nd smallest element (0-based index)
-//   int n = arr.size();
-//   if (k < 0 || k >= n) {
-//     std::cout << "Invalid value of k\n";
-//     return 1;
-//   }
-
-//   Number result = quickselect(arr, 0, n - 1, k);
-//   std::cout << "The " << k + 1 << "th smallest element is " << result <<
-//   "\n";
-
-//   return 0;
-// }
