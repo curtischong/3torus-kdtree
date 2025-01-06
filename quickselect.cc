@@ -20,12 +20,13 @@ int partition(std::vector<Number> &arr, int left, int right) {
 }
 
 // Quickselect function
-Number quickselect(std::vector<Number> &arr, int left, int right, int k) {
+int quickselect(std::vector<Number> &arr, int left, int right, int k) {
   if (left <= right) {
     int pivotIndex = partition(arr, left, right);
 
     if (pivotIndex == k) {
-      return arr[pivotIndex];
+      //   return arr[pivotIndex];
+      return pivotIndex;
     } else if (pivotIndex > k) {
       return quickselect(arr, left, pivotIndex - 1, k);
     } else {

@@ -9,6 +9,12 @@ struct Node {
 
   Node(const Number &val, Node *left, Node *right)
       : val{val}, left{left}, right{right} {}
+
+  // destructor
+  ~Node() {
+    delete left;
+    delete right;
+  }
 };
 
 class KdTree1D {
@@ -18,28 +24,29 @@ public:
   KdTree1D(std::vector<Number> arr) {
     this->root = createNode(arr, 0, arr.size());
   }
+
   Node *createNode(std::vector<Number> arr, int start, int end) {
     // for leaf nodes, just return a new node with the one value
+    Node *nd = new Node(arr[start], nullptr, nullptr);
     if (end - start == 1) {
-      return new Node{arr[start], nullptr, nullptr};
+      return nd;
     }
 
     int n = end - start;
 
-    Number medianX = quickselect(arr, 0, n - 1, n / 2);
+    // note that this is floor(n/2)
+    int pivotIdx = quickselect(arr, 0, n - 1, n / 2);
+    Number median = arr[pivotIdx];
 
-    Node node;
-    node.val = median(arr);
-    if (start == end) {
-      node.left = nullptr;
-      node.right = nullptr;
-    } else {
-      int mid = (start + end) / 2;
-      node.left = createNode(arr, start, mid);
-      node.right = createNode(arr, mid + 1, end);
-    }
-    return node;
+    nd->val = median;
+    nd->left = createNode(arr, start, pivotIdx);
+    nd->right = createNode(arr, pivotIdx + 1, end);
+
+    return nd;
   }
+
+  // destructor
+  ~KdTree1D() { delete root; }
 };
 
 int main() {
