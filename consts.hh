@@ -1,3 +1,3 @@
 
 // typedef double Number;
-using Number = float;
+using Number = float_t;
