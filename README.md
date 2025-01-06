@@ -1,5 +1,8 @@
 # 3torus-kdtree
 
+### Install
+git submodule update --init
+
 
 The general algorithm:
 - we use the periodic boundary distance metric to determine if we're going to recurse into the child branches

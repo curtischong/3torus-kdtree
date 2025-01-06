@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/eigen-3.4.0",
-                "/opt/homebrew/Cellar/pybind11/**"
+                "${workspaceFolder}/extern/pybind11"
             ],
             "defines": [],
             "macFrameworkPath": [
