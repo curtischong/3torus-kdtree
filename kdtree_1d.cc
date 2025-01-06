@@ -52,5 +52,6 @@ public:
 int main() {
   std::vector<Number> arr = {3.2, 2.1, 1.5, 5.8, 4.6};
   KdTree1D tree(arr);
+  std::cout << "1d tree" << std::endl;
   return 0;
 }
